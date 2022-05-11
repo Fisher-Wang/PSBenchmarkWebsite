@@ -1,0 +1,13 @@
+[server]
+maxUploadSize = 1000
+address = "127.0.0.1"
+port = 10087
+baseUrlPath = "psbenchmarkwebsite"
+headless = true
+
+[browser]
+gatherUsageStats = false
+serverAddress = "lab.ybh1998.space"
+
+[logger]
+# level = "debug"
