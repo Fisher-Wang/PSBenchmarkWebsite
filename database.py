@@ -52,17 +52,20 @@ class DashboardDB():
     
     def fetch_records_for_show(self):
         # ref: https://stackoverflow.com/a/28119350/13874470
+        # ref: https://stackoverflow.com/questions/4618624/
         self.cursor.execute(
             '''
             SELECT
                 username,
                 time,
-                score
+                score,
+                method_name
             FROM dashboard AS a
             WHERE username || '-' || session_id || '-' || time IN (
                 SELECT username || '-' || session_id || '-' || time
                 FROM dashboard AS b
                 WHERE a.username = b.username
+                AND b.score IS NOT NULL
                 ORDER BY b.score
                 LIMIT 1
             )
@@ -77,3 +80,6 @@ class DashboardDB():
         self.cursor.execute('SELECT * FROM dashboard ORDER BY username')
         data = self.cursor.fetchall()
         return data
+
+    def add_column(self, column_name, type):
+        self.cursor.execute(f'ALTER TABLE dashboard ADD COLUMN {column_name} {type}')
