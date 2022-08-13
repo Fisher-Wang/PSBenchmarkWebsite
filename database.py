@@ -2,6 +2,7 @@ import hashlib
 import sqlite3
 import datetime
 import pandas as pd
+from requests import session
 
 def get_time():
     return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -46,7 +47,7 @@ class DashboardDB():
         self.conn.commit()
         
     def fetch_record(self, username):
-        self.cursor.execute('SELECT * FROM dashboard WHERE username = ?', (username))
+        self.cursor.execute('SELECT * FROM dashboard WHERE username = ? ORDER BY score', (username,))
         data = self.cursor.fetchall()
         return data
     
@@ -83,3 +84,7 @@ class DashboardDB():
 
     def add_column(self, column_name, type):
         self.cursor.execute(f'ALTER TABLE dashboard ADD COLUMN {column_name} {type}')
+
+    def delete_item(self, username, session_id):
+        self.cursor.execute('DELETE FROM dashboard WHERE username = ? AND session_id = ?', (username, session_id))
+        self.conn.commit()

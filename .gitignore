@@ -12,3 +12,4 @@ data/
 *.bak
 *.npy
 *.xlsx
+*.txt
