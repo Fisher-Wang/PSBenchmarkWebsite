@@ -2,7 +2,6 @@ import hashlib
 import sqlite3
 import datetime
 import pandas as pd
-from requests import session
 
 def get_time():
     return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -71,6 +70,28 @@ class DashboardDB():
                 LIMIT 1
             )
             ORDER BY score, username
+            '''
+        )
+        data = self.cursor.fetchall()
+        return data
+
+    def fetch_last_submission(self):
+        self.cursor.execute(
+            '''
+            SELECT
+                username,
+                score,
+                time
+            FROM dashboard AS a
+            WHERE username || '-' || session_id || '-' || time IN (
+                SELECT username || '-' || session_id || '-' || time
+                FROM dashboard AS b
+                WHERE a.username = b.username
+                AND b.score IS NOT NULL
+                ORDER BY b.time DESC
+                LIMIT 1
+            )
+            ORDER BY username
             '''
         )
         data = self.cursor.fetchall()

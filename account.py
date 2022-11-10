@@ -6,10 +6,12 @@ import json
 import pandas as pd
 import numpy as np
 from config import data_dir, default_shape_shownames, default_texture_shownames, est_dir_name
+from database import DashboardDB
 from evaluate import Evaluate
 from utils import get_sesstion_id, colorize_df
 from draw import plot
 import gc
+from typing import Type
 
 def clear_cache():
     st.caching.clear_memo_cache()
@@ -59,22 +61,32 @@ class MainPage():
             st.write('successfully write to folder')
             return True
             
-    def showtable(self, db):
+    def showtable(self, db: Type[DashboardDB]):
         st.subheader('Ranking')
-        data = db.fetch_records_for_show()
-        mae_term = 'Best Mean Angular Error'
+        username_term = 'User Name'
+        mae_term = 'Best MAE (Mean Angular Error)'
         submit_time_term = 'Submission Time'
         method_name_term = 'Method Name'
-        df = pd.DataFrame(data, columns=['User Name', submit_time_term, mae_term, method_name_term])
-        # Reorder Columns
+        last_mae_term = 'Last MAE'
+        last_submit_term = 'Last Submission'
+
+        data = db.fetch_records_for_show()
+        df = pd.DataFrame(data, columns=[username_term, submit_time_term, mae_term, method_name_term])
         order = [0, 2, 1, 3]
-        df = df[[df.columns[i] for i in order]]
+        df = df[[df.columns[i] for i in order]]  # Reorder Columns
+
+        data = db.fetch_last_submission()
+        df_time = pd.DataFrame(data, columns=[username_term, last_mae_term, last_submit_term])
+
+        df = pd.merge(df, df_time, on=username_term)
+        df = df.drop(columns=[method_name_term])  # TODO: add method name later
         
+        df.columns.name = 'Rank'
         # Ref: Convert string to float, https://stackoverflow.com/a/16729635/13874470
         df[mae_term] = df[mae_term].astype('float')
-        df.columns.name = 'Rank'
+        df[last_mae_term] = df[last_mae_term].astype('float')
         # Ref: Set float precision, https://stackoverflow.com/a/62166854/13874470
-        style = df.style.format({mae_term: '{:.2f}'})  
+        style = df.style.format({mae_term: '{:.2f}', last_mae_term: '{:.2f}'})  
 
         ## set table style
         ## Ref: color orange hex, https://www.color-hex.com/color/ffa500
@@ -106,7 +118,6 @@ class MainPage():
         target = '<table '
         i = html.find(target) + len(target)
         html = html[:i] + 'style="margin: 0px auto;" ' + html[i:]
-        # st.write(html)
         st.markdown(html, unsafe_allow_html=True)
 
     def evaluate(self):

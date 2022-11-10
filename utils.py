@@ -1,7 +1,7 @@
 from colors import colorlist_coolwarm
 from streamlit.report_thread import get_report_ctx
-from streamlit.server.server import Server
 import os
+from os.path import join as pjoin
 from config import default_shape_shownames, default_texture_shownames, est_dir_name
 from skimage import io
 import scipy.io as scio
@@ -12,11 +12,11 @@ def get_good_est_dir(usr_dir):
     t0 = default_texture_shownames[0]
     if os.path.exists(os.path.join(d, f'{s0}_{t0}.mat')):
         return d
-    sd_name = [name for name in os.listdir(d) if os.path.isdir(os.path.join(d, name))][0]
-    sd = os.path.join(usr_dir, est_dir_name, sd_name)
-    if os.path.exists(os.path.join(sd, f'{s0}_{t0}.mat')):
-        return sd
-    raise FileNotFoundError(sd)
+    sub_dirs = [pjoin(d, x) for x in os.listdir(d) if os.path.isdir(pjoin(d, x))]
+    for sd in sub_dirs:
+        if os.path.exists(os.path.join(sd, f'{s0}_{t0}.mat')):
+            return sd
+    raise Exception('Bad File Structure!')
 
 def read_est_nmap(path):
     format = path.split('.')[-1].lower()
