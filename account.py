@@ -49,16 +49,15 @@ class MainPage():
         file = st.file_uploader('choose a zip archive', ['zip'])
         if file is not None:
             bytes = file.getvalue()
-            st.write('successfully get bytes')
+            st.write('[INFO] Successfully get bytes')
             zf = zipfile.ZipFile(io.BytesIO(bytes), "r")
             uncompressed_size = sum([e.file_size for e in zf.infolist()])
             if uncompressed_size > (1<<30):
-                st.write('Fail in extraction: unscompressed size exceeds 1GB!')
+                st.write('[ERROR] Fail in extraction: unscompressed size exceeds 1GB!')
                 return False
-            st.write('successfully convert to zip file')
+            st.write('[INFO] Successfully convert to zip file')
             zf.extractall(os.path.join(self.user_dir, est_dir_name))
-            # st.write(f'successfully write to folder {self.user_dir}/{est_dir_name}')
-            st.write('successfully write to folder')
+            st.write('[INFO] Successfully write to folder')
             return True
             
     def showtable(self, db: Type[DashboardDB]):
@@ -145,7 +144,7 @@ class MainPage():
 
     def download_csv_report(self):
         array = self.df_mean.to_numpy().astype('float')
-        array = np.round(array, 2)
+        # array = np.round(array, 2)
         df = pd.DataFrame(array, index=default_shape_shownames, columns=default_texture_shownames)
         path = os.path.join(self.user_dir, 'result.csv')
         df.to_csv(path)
@@ -156,7 +155,7 @@ class MainPage():
         gc.collect()
         first_entry = 0  # XXX: 加上first_entry的判断能够优化显示效果，但是我不知道为什么，streamlit背后的原理十分玄学……
         login_section_ph = st.empty()
-        login_section_ph.subheader("Login Section")
+        login_section_ph.subheader("Login")
         username_ph = st.empty()
         password_ph = st.empty()
         button_ph = st.empty()
@@ -186,8 +185,9 @@ class MainPage():
                 ```
             ''')
             st.markdown("2. In the mat file, the key-value structure should be {'Normal_est': normal_map}.")
-            st.markdown("3. The file structure diagram, along with a example submission file, are shown below for your reference. ")
+            st.markdown("")
             st.markdown('''
+            3. The file structure diagram, along with a example submission file, are shown below for your reference. 
                 ```text
                 xxx.zip
                 |__ BALL_POM.mat
@@ -202,7 +202,7 @@ class MainPage():
                 ```''')
             with open('data/CNN-PS_0.25.zip', 'rb') as f:
                 st.download_button('Download Example Submission File', f, file_name='example.zip', mime='application/zip')
-            st.markdown('4. **Normal Map Size**. Note that the estimated normal map in the example is downsampled in the degree of 1/4, with the total size of only 27MB, and the resolution is only 250x250. <u>**However, we recommand that you submit your normal map in full resolution 1001x1001 to get the most precise evaluation result**</u>. If your normal map shape is not 1001x1001, we will resize them into 1001x1001 using `skimage.transform.resize` before evaluation. If you submit the full resolution version, the file size should be around 900MB, and it may take a few minutes to upload and evaluate. ', unsafe_allow_html=True)
+            st.markdown('4. **Normal Map Size**. Note that the estimated normal map in the example is downsampled in the degree of 1/4, with the total size of only 27MB, and the resolution is only 250x250. <u>**However, we recommand that you submit your normal map in full resolution 1001x1001 to get the most precise evaluation result**</u>. If your normal map shape is not 1001x1001, we will resize the GT normal into your shape with nearest neighbor interpolation before evaluation. If you submit the full resolution version, the file size should be around 900MB, and it may take a few minutes to upload and evaluate. ', unsafe_allow_html=True)
             st.markdown('5. **Data Range**. Your normal map data should be in range [-1, 1]. ')
             st.markdown('##### Upload Your Normal Map Zip Archive')
             if self.uploadfile():

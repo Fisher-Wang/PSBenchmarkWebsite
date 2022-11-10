@@ -43,7 +43,7 @@ def plot(df_mean, shapes, textures):
     ax.tick_params(axis='y', labelleft=True)
     g.set_yticklabels(shapes, fontsize=s3, rotation=0)
 
-    plt.title('(%.2f/%.2f)' % (np.mean(matrix) , np.median(matrix)), fontsize=ss, fontweight='bold', y=1.05)
+    plt.title('Average MAE = %.2f' % (np.mean(matrix)), fontsize=ss, fontweight='bold')
 
     # plt.show()
     return fig

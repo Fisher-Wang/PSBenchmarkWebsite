@@ -18,7 +18,7 @@ def get_good_est_dir(usr_dir):
             return sd
     raise Exception('Bad File Structure!')
 
-def read_est_nmap(path):
+def read_nest(path):
     format = path.split('.')[-1].lower()
     if format == 'mat':
         est = scio.loadmat(path)
