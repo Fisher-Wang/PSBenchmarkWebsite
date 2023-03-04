@@ -2,13 +2,14 @@ import streamlit as st
 import numpy as np
 from glob import glob
 import os
+import shutil
 from skimage import io, img_as_bool
 import pandas as pd
 import scipy.io as scio
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.font_manager import FontProperties
-from skimage.transform import resize
+import cv2
 from utils import get_good_est_dir, read_nest
 
 from config_dataset import dataset_dir
@@ -39,49 +40,34 @@ class Evaluate():
     def evaluate(self):
         
         df_mean = pd.DataFrame(index=self.shape_shownames, columns=self.texture_shownames)
-        df_var = pd.DataFrame(index=self.shape_shownames, columns=self.texture_shownames)
-        df_mid = pd.DataFrame(index=self.shape_shownames, columns=self.texture_shownames)
         
         for i_s, s in list(enumerate(self.shape_names)):
-            # self.progress_bar.progress((i_m * self.ns + i_s) / (self.nm * self.ns))
-            
+
             path = os.path.join(dataset_dir, '{}_{}'.format(s, self.texture_names[0]),'Normal_gt.mat')
             gt = scio.loadmat(path)['Normal_gt']
             
-            path = os.path.join(dataset_dir, '{}_{}'.format(s, self.texture_names[0]),'mask.png')
-            mask = img_as_bool(io.imread(path))
-
             for i_t, t in enumerate(self.texture_names):
                 self.progress_bar.progress((i_s * self.nt + i_t) / self.num_tot_objs)
                 
-                ## .mat version
-                # path = os.path.join(args.est_dir, '{}/{}_{}.mat'.format(m, o, t))
-                # est = scio.loadmat(path)
-                # if 'Normal_est' in est.keys():
-                #     est = est['Normal_est']
-                # else:
-                #     est = est['normal']
+                path = os.path.join(dataset_dir, '{}_{}'.format(s, self.texture_names[0]),'mask.png')
+                mask = io.imread(path)
                 
-                ## .png version
-                # TODO: judge which format to deal with
+                # TODO: support other format
                 path = os.path.join(self.est_dir ,'{}_{}.mat'.format(s,t))
                 nest = read_nest(path)
                 h, w = nest.shape[:2]
                 if (h, w) != (1001, 1001):
-                    gt = resize(gt, (h, w), order=0)
-                    mask = resize(mask, (h, w), order=0)
+                    gt = cv2.resize(gt, (h, w), interpolation=cv2.INTER_NEAREST)
+                    mask = cv2.resize(mask, (h, w), interpolation=cv2.INTER_NEAREST)
                     if i_s == 0 and i_t == 0:
                         st.write(f"[WARN] Resizing GT normal from (1001, 1001) into ({h}, {w}) with nearest neighbor interpolation")
 
+                mask = img_as_bool(mask)
                 ang_err = np.arccos((gt * nest).sum(-1).clip(-1,1)) / np.pi * 180
-                if s == 'bunny':
-                    ang_err = ang_err[::-1, ::-1]
                     
                 cut = ang_err.copy()
                 ang_err = ang_err[mask]
                 df_mean.iloc[i_s, i_t] = ang_err.mean()
-                df_var.iloc[i_s, i_t] = ang_err.var()
-                df_mid.iloc[i_s, i_t] = np.median(ang_err)
                 
                 ## Save emap
                 # cut[cut > 45] = 45
@@ -93,6 +79,7 @@ class Evaluate():
                 # plt.close('all')
                     
         df_mean.to_csv(os.path.join(self.result_dir, 'mean.csv'))
-        df_var.to_csv(os.path.join(self.result_dir, 'var.csv'))
-        df_mid.to_csv(os.path.join(self.result_dir, 'mid.csv'))
+        avg_mae = df_mean.to_numpy().astype('float64').mean()
+        if avg_mae > 13:
+            shutil.rmtree(self.est_dir)  ## delete bad results
         return df_mean
