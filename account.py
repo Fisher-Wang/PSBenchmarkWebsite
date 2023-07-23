@@ -52,8 +52,8 @@ class MainPage():
             st.write('[INFO] Successfully get bytes')
             zf = zipfile.ZipFile(io.BytesIO(bytes), "r")
             uncompressed_size = sum([e.file_size for e in zf.infolist()])
-            if uncompressed_size > (1<<30):
-                st.write('[ERROR] Fail in extraction: unscompressed size exceeds 1GB!')
+            if uncompressed_size > 1.5 * (1<<30):
+                st.write('[ERROR] Fail in extraction: uncompressed size exceeds 1.5GB!')
                 return False
             st.write('[INFO] Successfully convert to zip file')
             zf.extractall(os.path.join(self.user_dir, est_dir_name))

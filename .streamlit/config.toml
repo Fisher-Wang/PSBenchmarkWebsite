@@ -1,5 +1,5 @@
 [server]
-maxUploadSize = 1000
+maxUploadSize = 1500
 address = "127.0.0.1"
 port = 10087
 baseUrlPath = "psbenchmarkwebsite"
