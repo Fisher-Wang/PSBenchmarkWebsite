@@ -9,10 +9,14 @@ def get_time():
 def hash(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-class AccountDB():
+class BaseDB:
     def __init__(self) -> None:
-        self.conn = sqlite3.connect('account.db')
+        self.conn = sqlite3.connect('data.db')
         self.cursor = self.conn.cursor()
+
+class AccountDB(BaseDB):
+    def __init__(self) -> None:
+        super().__init__()
         self.cursor.execute('CREATE TABLE IF NOT EXISTS userstable(username TEXT, password TEXT)')
 
     def add_account(self, usr, pwd):
@@ -30,10 +34,9 @@ class AccountDB():
         data = self.cursor.fetchall()
         return data
 
-class DashboardDB():
+class DashboardDB(BaseDB):
     def __init__(self) -> None:
-        self.conn = sqlite3.connect('dashboard.db')
-        self.cursor = self.conn.cursor()
+        super().__init__()
         self.cursor.execute('CREATE TABLE IF NOT EXISTS dashboard(username TEXT, session_id TEXT, time TEXT, score TEXT)')
         
     def update_record(self, username, session_id, score):
