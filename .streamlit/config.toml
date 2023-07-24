@@ -7,7 +7,7 @@ headless = true
 
 [browser]
 gatherUsageStats = false
-serverAddress = "lab.ybh1998.space"
+# serverAddress = "lab.ybh1998.space"
 
 [logger]
 # level = "debug"

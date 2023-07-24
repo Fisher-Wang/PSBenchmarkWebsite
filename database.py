@@ -10,19 +10,24 @@ def hash(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
 class BaseDB:
-    def __init__(self) -> None:
-        self.conn = sqlite3.connect('data.db')
+    def __init__(self, db_path) -> None:
+        self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
 
 class AccountDB(BaseDB):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, db_path) -> None:
+        super().__init__(db_path)
         self.cursor.execute('CREATE TABLE IF NOT EXISTS userstable(username TEXT, password TEXT)')
 
     def add_account(self, usr, pwd):
         self.cursor.execute('INSERT INTO userstable(username,password) VALUES (?,?)',(usr, hash(pwd)))
         self.conn.commit()
-        
+
+    def fetch_account_by_username(self, usr):
+        self.cursor.execute('SELECT * FROM userstable WHERE username = ?', (usr,))
+        data = self.cursor.fetchall()
+        return data
+    
     def fetch_account(self, usr, pwd):
         self.cursor.execute('SELECT * FROM userstable WHERE username = ? AND password = ?', (usr, hash(pwd)))
         data = self.cursor.fetchall()
@@ -35,9 +40,9 @@ class AccountDB(BaseDB):
         return data
 
 class DashboardDB(BaseDB):
-    def __init__(self) -> None:
-        super().__init__()
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS dashboard(username TEXT, session_id TEXT, time TEXT, score TEXT)')
+    def __init__(self, db_path) -> None:
+        super().__init__(db_path)
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS dashboard(username TEXT, session_id TEXT, time TEXT, score FLOAT, method_name TEXT)')
         
     def update_record(self, username, session_id, score):
         self.cursor.execute('SELECT * FROM dashboard WHERE username = ? AND session_id = ?', (username, session_id))

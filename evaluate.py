@@ -1,85 +1,117 @@
 import streamlit as st
 import numpy as np
-from glob import glob
-import os
+from os.path import join as pjoin
 import shutil
-from skimage import io, img_as_bool
 import pandas as pd
-import scipy.io as scio
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.font_manager import FontProperties
 import cv2
-from utils import get_good_est_dir, read_nest
+from utils import *
+import itertools
+from abc import ABC, abstractmethod
+from config import ConfigBase
 
-from config_dataset import dataset_dir
-from config import show, est_dir_name
 
-class Evaluate():
-    def __init__(self, user_dir, shape_names, texture_names, progress_bar) -> None:
-        self.user_dir = user_dir
-        self.est_dir = get_good_est_dir(self.user_dir)
+class EvaluateBase(ABC):
+    def __init__(self, config, username, userdir, names) -> None:
+        self.config = config
+        self.username = username
+        self.userdir = userdir
+        self.result_dir = mkdir(pjoin(userdir, 'result'))
+        self.names = names
+        self.est_dir = self.get_good_est_dir(self.userdir)
+        self.maes = []
         
+        self.H = None
+        self.W = None
+
+    def evaluate(self):
+        progress_bar = st.progress(0.0)
+        for i, name in enumerate(self.names):
+            progress_bar.progress(i / len(self.names))
+            
+            gt = read_mat(pjoin(self.config.dataset_dir, name, 'Normal_gt.mat'))
+            mask = read_mask(pjoin(self.config.dataset_dir, name, 'mask.png')).astype('uint8')
+            
+            # TODO: support other format
+            nest = read_mat(pjoin(self.est_dir, f'{name}.mat'))
+            h, w = nest.shape[:2]
+            if (h, w) != (self.H, self.W):
+                gt = cv2.resize(gt, (h, w), interpolation=cv2.INTER_NEAREST)
+                mask = cv2.resize(mask, (h, w), interpolation=cv2.INTER_NEAREST)
+                # nest = cv2.resize(nest, (self.H, self.W), interpolation=cv2.INTER_NEAREST)
+                if i == 0:
+                    st.warning(f"[WARN] Resizing GT normal from ({self.H}, {self.W}) into ({h}, {w}) with nearest neighbor interpolation")
+
+            mask = mask.astype(bool)
+            _, mae = get_emap(nest, gt, mask)
+            self.maes.append(mae)
+        progress_bar.progress(1.0)
+        
+    @property
+    def score(self):
+        return np.array(self.maes).mean()
+    
+    def get_good_est_dir(self, usr_dir):
+        d = os.path.join(usr_dir, ConfigBase.est_dir_name)
+        if os.path.exists(os.path.join(d, f'{self.names[0]}.mat')):
+            return d
+        sub_dirs = [pjoin(d, x) for x in os.listdir(d) if os.path.isdir(pjoin(d, x))]
+        for sd in sub_dirs:
+            if os.path.exists(os.path.join(sd, f'{self.names[0]}.mat')):
+                return sd
+        raise Exception('Bad File Structure!')
+    
+class Evaluate100(EvaluateBase):
+    def __init__(self, config, username, userdir, shape_names, texture_names) -> None:
         self.shape_names = shape_names 
         self.texture_names = texture_names 
-        self.progress_bar = progress_bar
+        names = [f'{s}_{t}' for s, t in itertools.product(self.shape_names, self.texture_names)]
+        super().__init__(config, username, userdir, names)
         
-        self.shape_shownames = shape_names
-        self.texture_shownames = texture_names
-        self.errmap_dir = os.path.join(user_dir, 'errmap')
-        self.result_dir = os.path.join(user_dir, 'result')
-        
-        # for the progress bar
-        self.ns = len(shape_names)
-        self.nt = len(texture_names)
-        self.num_tot_objs = self.ns * self.nt
-        
-        os.makedirs(self.errmap_dir, exist_ok=True)
-        os.makedirs(self.result_dir, exist_ok=True)
-        
-    def evaluate(self):
-        
-        df_mean = pd.DataFrame(index=self.shape_shownames, columns=self.texture_shownames)
-        
-        for i_s, s in list(enumerate(self.shape_names)):
+        self.H = 1001
+        self.W = 1001
 
-            path = os.path.join(dataset_dir, '{}_{}'.format(s, self.texture_names[0]),'Normal_gt.mat')
-            gt = scio.loadmat(path)['Normal_gt']
-            
-            for i_t, t in enumerate(self.texture_names):
-                self.progress_bar.progress((i_s * self.nt + i_t) / self.num_tot_objs)
-                
-                path = os.path.join(dataset_dir, '{}_{}'.format(s, self.texture_names[0]),'mask.png')
-                mask = io.imread(path)
-                
-                # TODO: support other format
-                path = os.path.join(self.est_dir ,'{}_{}.mat'.format(s,t))
-                nest = read_nest(path)
-                h, w = nest.shape[:2]
-                if (h, w) != (1001, 1001):
-                    gt = cv2.resize(gt, (h, w), interpolation=cv2.INTER_NEAREST)
-                    mask = cv2.resize(mask, (h, w), interpolation=cv2.INTER_NEAREST)
-                    if i_s == 0 and i_t == 0:
-                        st.write(f"[WARN] Resizing GT normal from (1001, 1001) into ({h}, {w}) with nearest neighbor interpolation")
+    def show_result(self):
+        df = pd.DataFrame(np.array(self.maes).reshape(len(self.shape_names), len(self.texture_names)), index=self.shape_names, columns=self.texture_names)
+        
+        ## HTML Table showing in website
+        df_show = colorize_df(df, 0, 45)
+        st.subheader("Result")
+        st.dataframe(df_show)
+        
+        ## PDF Table for download
+        from draw import plot
+        fig = plot(df, self.shape_names, self.texture_names)
+        path = pjoin(self.userdir, 'result.pdf')
+        fig.savefig(path, dpi=300, bbox_inches='tight')
+        with open(path, 'rb') as f:
+            st.download_button('Download PDF Report', f, file_name=f'{self.username}_report.pdf')
+        
+        ## CSV Table for download
+        path = pjoin(self.result_dir, 'result.csv')
+        df.to_csv(path)
+        with open(path, 'rb') as f:
+            st.download_button('Download CSV Report', f, file_name=f'{self.username}_report.csv')
 
-                mask = img_as_bool(mask)
-                ang_err = np.arccos((gt * nest).sum(-1).clip(-1,1)) / np.pi * 180
-                    
-                cut = ang_err.copy()
-                ang_err = ang_err[mask]
-                df_mean.iloc[i_s, i_t] = ang_err.mean()
-                
-                ## Save emap
-                # cut[cut > 45] = 45
-                # cut[np.logical_not(mask_)] = 0
-                # fig = plt.figure(figsize=(5,5))
-                # plt.imshow(cut, cmap='RdYlGn_r', vmin=0, vmax=45)
-                # plt.axis('off')
-                # fig.savefig(os.path.join(self.errmap_dir, '{}_{}.png'.format(s, t)), bbox_inches='tight')
-                # plt.close('all')
-                    
-        df_mean.to_csv(os.path.join(self.result_dir, 'mean.csv'))
-        avg_mae = df_mean.to_numpy().astype('float64').mean()
-        if avg_mae > 13:
-            shutil.rmtree(self.est_dir)  ## delete bad results
-        return df_mean
+class EvaluatePi(EvaluateBase):
+    def __init__(self, config, username, userdir, shape_names, texture_names) -> None:
+        self.shape_names = shape_names 
+        self.texture_names = texture_names 
+        names = self.shape_names
+        super().__init__(config, username, userdir, names)
+        
+        self.H = 1216
+        self.W = 1216
+
+    def show_result(self):
+        df = pd.DataFrame(np.array(self.maes).reshape(len(self.shape_names), len(self.texture_names)), index=self.shape_names, columns=self.texture_names)
+        
+        ## HTML Table showing in website
+        df_show = colorize_df(df, 0, 30)
+        st.subheader("Result")
+        st.dataframe(df_show)
+        
+        ## CSV Table for download
+        path = pjoin(self.result_dir, 'result.csv')
+        df.to_csv(path)
+        with open(path, 'rb') as f:
+            st.download_button('Download CSV Report', f, file_name=f'{self.username}_report.csv')

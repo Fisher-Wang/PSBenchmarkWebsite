@@ -2,7 +2,7 @@
 .idea/
 __pycache__/
 
-pmsData/
+pmsData*/
 tmp/
 data/
 
@@ -13,3 +13,4 @@ data/
 *.npy
 *.xlsx
 *.txt
+*.zip

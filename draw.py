@@ -6,7 +6,6 @@ import seaborn as sns
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.pyplot as plt
 import numpy as np
-from config import show
 
 def plot(df_mean, shapes, textures):
 
