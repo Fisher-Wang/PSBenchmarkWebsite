@@ -14,6 +14,7 @@ from typing import Type
 from packaging import version
 from abc import ABC, abstractmethod
 from os.path import join as pjoin
+from config import ConfigBase
 
 def clear_cache():
     if version.parse(st.__version__) < version.parse("1.4"):
@@ -29,7 +30,7 @@ def clear_cache():
     gc.collect()
 
 class MainPageBase(ABC):
-    def __init__(self, config):
+    def __init__(self, config: ConfigBase):
         self.config = config
         self.shapes = self.config.shape_names
         self.textures = self.config.texture_names
@@ -153,7 +154,7 @@ class MainPageBase(ABC):
             password_ph.empty()
             button_ph.empty()
             self.username = username
-            self.user_dir = pjoin(self.config.data_dir, f'{username}_{self.session_id}')
+            self.user_dir = pjoin(self.config.upload_dir, f'{username}_{self.session_id}')
             st.success(f"Successfully logged in as {username}, welcome!")
             
             self.submission_description()
@@ -166,6 +167,7 @@ class MainPageBase(ABC):
                 eval.evaluate()
                 self.record_score(dashboard_db, eval.score)
                 eval.show_result()
+                st.warning('For a new submission, please refresh the page!')  # TODO: fix this bug
         self.showtable(dashboard_db)
         # st.write("Your can give a name to your method:")
         # method_name = st.text_input('Method Name', value='')

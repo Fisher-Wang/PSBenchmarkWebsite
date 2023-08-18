@@ -3,11 +3,14 @@ import os
 
 class ConfigBase:
     est_dir_name = 'est_nmap'
-    data_dir = os.path.abspath('tmp')
+    upload_dir = None
+    texture_names = None
+    shape_names = None
     
 class Config100(ConfigBase):
     type='100'
     dataset_dir = 'pmsData'
+    upload_dir = os.path.abspath('upload_100')
     texture_names = [
         'POM',
         'PP',
@@ -36,6 +39,7 @@ class Config100(ConfigBase):
 class ConfigPi(ConfigBase):
     type='Pi'
     dataset_dir = 'pmsData_Pi'
+    upload_dir = os.path.abspath('upload_Pi')
     texture_names = ['']
     shape_names = [
         'Flower',

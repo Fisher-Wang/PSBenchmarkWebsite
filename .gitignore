@@ -5,6 +5,7 @@ __pycache__/
 pmsData*/
 tmp/
 data/
+upload*/
 
 *.db
 *.log

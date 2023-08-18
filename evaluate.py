@@ -46,6 +46,10 @@ class EvaluateBase(ABC):
             self.maes.append(mae)
         progress_bar.progress(1.0)
         
+        avg = np.mean(self.maes)
+        if (self.config.type == '100' and avg > 13) or (self.config.type == 'Pi' and avg > 9):
+            shutil.rmtree(self.est_dir)
+    
     @property
     def score(self):
         return np.array(self.maes).mean()
