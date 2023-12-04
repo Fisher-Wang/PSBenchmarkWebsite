@@ -10,7 +10,7 @@ from account import MainPagePi
 from utils import *
 
 st.set_page_config(page_title='DiLiGenT-Pi Benchmark', page_icon=':fire', layout='centered')
-st.title('DiLiGenT-$\small \Pi$ Benchmark')
+st.title('DiLiGenT-$\\small \Pi$ Benchmark')
 main_page = MainPagePi(ConfigPi)
 account_database = AccountDB('data_pi.db')
 dashboard_database = DashboardDB('data_pi.db')

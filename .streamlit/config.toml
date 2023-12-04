@@ -10,4 +10,4 @@ gatherUsageStats = false
 serverAddress = "lab.ybh1998.space"
 
 [logger]
-# level = "debug"
+level = "debug"

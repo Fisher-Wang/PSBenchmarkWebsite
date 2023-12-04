@@ -10,7 +10,7 @@ from account import MainPage100
 from utils import *
 
 st.set_page_config(page_title='DiLiGenT10^2 Benchmark', page_icon=':fire', layout='centered')
-st.title('DiLiGenT10$\small ^2$ Benchmark')
+st.title('DiLiGenT10$\\small ^2$ Benchmark')
 main_page = MainPage100(Config100)
 account_database = AccountDB('data.db')
 dashboard_database = DashboardDB('data.db')

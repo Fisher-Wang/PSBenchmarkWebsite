@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from database import DashboardDB
 from evaluate import Evaluate100, EvaluatePi
-from utils import get_sesstion_id, colorize_df
+from utils import get_sesstion_id, get_remote_ip
 from draw import plot
 import gc
 from typing import Type
@@ -15,6 +15,7 @@ from packaging import version
 from abc import ABC, abstractmethod
 from os.path import join as pjoin
 from config import ConfigBase
+from streamlit import logger
 
 def clear_cache():
     if version.parse(st.__version__) < version.parse("1.4"):
@@ -36,6 +37,7 @@ class MainPageBase(ABC):
         self.textures = self.config.texture_names
         self.username = None
         self.session_id = get_sesstion_id()
+        self.log = logger.get_logger(st.__name__)
         
     def signup(self, account_db):
         gc.collect()
@@ -48,12 +50,12 @@ class MainPageBase(ABC):
                 st.error('Empty user name. Try again!')
             else:
                 data = account_db.fetch_account_by_username(username)
-                print(data)
                 if data:
                     st.error(f'Username {username} has been used. Try another one!')
                 else:
                     account_db.add_account(username, password)
                     st.success(f"Sign up successfully.")
+                    self.log.info(f"User \"{username}\" signed up")
                     
     def uploadfile(self):
         file = st.file_uploader('choose a zip archive', ['zip'])
@@ -156,17 +158,20 @@ class MainPageBase(ABC):
             self.username = username
             self.user_dir = pjoin(self.config.upload_dir, f'{username}_{self.session_id}')
             st.success(f"Successfully logged in as {username}, welcome!")
+            self.log.info(f"User \"{username}\" logged in from IP {get_remote_ip()}")
             
             self.submission_description()
             
             st.markdown('##### Upload Your Normal Map Zip Archive')
             if self.uploadfile():
+                self.log.info(f"User \"{username}\" uploading finished")
                 clear_cache()
                 Eval = Evaluate100 if self.config.type == '100' else EvaluatePi
                 eval = Eval(self.config, self.username, self.user_dir, self.shapes, self.textures)
                 eval.evaluate()
                 self.record_score(dashboard_db, eval.score)
                 eval.show_result()
+                self.log.info(f"User \"{username}\" evaluation finished")
                 st.warning('For a new submission, please refresh the page!')  # TODO: fix this bug
         self.showtable(dashboard_db)
         # st.write("Your can give a name to your method:")
