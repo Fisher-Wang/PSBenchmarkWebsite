@@ -6,7 +6,7 @@ import json
 import pandas as pd
 import numpy as np
 from database import DashboardDB
-from evaluate import Evaluate100, EvaluatePi
+from evaluate import Evaluate100, EvaluatePi, EvaluateRT
 from utils import get_sesstion_id, get_remote_ip
 from draw import plot
 import gc
@@ -14,7 +14,7 @@ from typing import Type
 from packaging import version
 from abc import ABC, abstractmethod
 from os.path import join as pjoin
-from config import ConfigBase
+from config import ConfigBase, Config100, ConfigPi, ConfigRT
 from streamlit import logger
 
 def clear_cache():
@@ -166,7 +166,14 @@ class MainPageBase(ABC):
             if self.uploadfile():
                 self.log.info(f"User \"{username}\" uploading finished")
                 clear_cache()
-                Eval = Evaluate100 if self.config.type == '100' else EvaluatePi
+                if self.config == Config100:
+                    Eval = Evaluate100
+                elif self.config == ConfigPi:
+                    Eval = EvaluatePi
+                elif self.config == ConfigRT:
+                    Eval = EvaluateRT
+                else:
+                    raise ValueError(f"Unknown config type: {self.config}")
                 eval = Eval(self.config, self.username, self.user_dir, self.shapes, self.textures)
                 eval.evaluate()
                 self.record_score(dashboard_db, eval.score)
@@ -246,5 +253,39 @@ class MainPagePi(MainPageBase):
             st.download_button('Download Example Submission File', f, file_name='example.zip', mime='application/zip')
         st.markdown('''
             4. **Normal Map Size**. Note that the estimated normal map in the example is downsampled in the degree of 1/4, with the total size of only 15MB, and the resolution is only 304x304. <u>**However, we recommand that you submit your normal map in full resolution 1216x1216 to get the most precise evaluation result**</u>. If your normal map shape is not 1216x1216, we will resize the GT normal into your shape with nearest neighbor interpolation before evaluation. If you submit the full resolution version, the file size should be around 250MB, and it may take a few minutes to upload and evaluate. 
+            5. **Data Range**. Your normal map data should be in range [-1, 1]. 
+            ''', unsafe_allow_html=True)
+
+class MainPageRT(MainPageBase):
+    def __init__(self, config) -> None:
+        super().__init__(config)
+    
+    def submission_description(self):
+        st.markdown(f'''
+            ### Submit Your Estimated Normal Map
+            ##### Submission File Structure
+            1. The normal map of all the 30 objects should be included in the zip file, each named as '{{object}}.mat', where the object names are: 
+            ```text
+            {", ".join(self.shapes)}
+            ```
+            2. In the mat file, the key-value structure should be {{'Normal_est': normal_map}}.
+            3. The file structure diagram, along with a example submission file, are shown below for your reference. 
+            ```text
+            xxx.zip
+            |__ imgs_T1R20.mat
+            |__ imgs_T1R36.mat
+            |__ ...
+            |__ imgs_T1R3000.mat
+            ...
+            |__ imgs_T64R20.mat
+            |__ imgs_T64R36.mat
+            |__ ...
+            |__ imgs_T64R3000.mat
+            ```
+            ''')
+        with open('data/RT_ST14_0.5.zip', 'rb') as f:
+            st.download_button('Download Example Submission File', f, file_name='example.zip', mime='application/zip')
+        st.markdown('''
+            4. **Normal Map Size**. Note that the estimated normal map in the example is downsampled in the degree of 1/2, with the total size of only 200MB, and the resolution is only 480x480. <u>**However, we recommand that you submit your normal map in full resolution 960x960 to get the most precise evaluation result**</u>. If your normal map shape is not 960x960, we will resize the GT normal into your shape with nearest neighbor interpolation before evaluation. If you submit the full resolution version, the file size should be around 700MB, and it may take a few minutes to upload and evaluate. 
             5. **Data Range**. Your normal map data should be in range [-1, 1]. 
             ''', unsafe_allow_html=True)

@@ -120,3 +120,27 @@ class EvaluatePi(EvaluateBase):
         df.to_csv(path)
         with open(path, 'rb') as f:
             st.download_button('Download CSV Report', f, file_name=f'{self.username}_report.csv')
+
+class EvaluateRT(EvaluateBase):
+    def __init__(self, config, username, userdir, shape_names, texture_names) -> None:
+        self.shape_names = shape_names 
+        self.texture_names = texture_names 
+        names = self.shape_names
+        super().__init__(config, username, userdir, names)
+        
+        self.H = 960
+        self.W = 960
+
+    def show_result(self):
+        df = pd.DataFrame(np.array(self.maes).reshape(len(self.shape_names), len(self.texture_names)), index=self.shape_names, columns=self.texture_names)
+        
+        ## HTML Table showing in website
+        df_show = colorize_df(df, 0, 30)
+        st.subheader("Result")
+        st.dataframe(df_show)
+        
+        ## CSV Table for download
+        path = pjoin(self.result_dir, 'result.csv')
+        df.to_csv(path)
+        with open(path, 'rb') as f:
+            st.download_button('Download CSV Report', f, file_name=f'{self.username}_report.csv')
