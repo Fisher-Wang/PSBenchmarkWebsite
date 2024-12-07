@@ -33,15 +33,18 @@ class EvaluateBase(ABC):
             
             # TODO: support other format
             nest = read_mat(pjoin(self.est_dir, f'{name}.mat'))
+            
             h, w = nest.shape[:2]
             if (h, w) != (self.H, self.W):
-                gt = cv2.resize(gt, (h, w), interpolation=cv2.INTER_NEAREST)
-                mask = cv2.resize(mask, (h, w), interpolation=cv2.INTER_NEAREST)
-                # nest = cv2.resize(nest, (self.H, self.W), interpolation=cv2.INTER_NEAREST)
+                gt = cv2.resize(gt, (w, h), interpolation=cv2.INTER_NEAREST)
+                mask = cv2.resize(mask, (w, h), interpolation=cv2.INTER_NEAREST)
+                # nest = cv2.resize(nest, (self.W, self.H), interpolation=cv2.INTER_NEAREST)
                 if i == 0:
                     st.warning(f"[WARN] Resizing GT normal from ({self.H}, {self.W}) into ({h}, {w}) with nearest neighbor interpolation")
 
             mask = mask.astype(bool)
+            gt = gt / np.linalg.norm(gt, axis=-1, keepdims=True)
+            nest = nest / np.linalg.norm(nest, axis=-1, keepdims=True)
             _, mae = get_emap(nest, gt, mask)
             self.maes.append(mae)
         progress_bar.progress(1.0)
